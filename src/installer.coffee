@@ -55,7 +55,7 @@ class InstallerFile
   # `root` user and `wheel` group. Then invoke `callback`.
   setOwnership: (callback) =>
     if @root
-      chown @path, "root:wheel", callback
+      chown @path, "root:admin", callback
     else
       callback false
 
@@ -91,18 +91,17 @@ module.exports = class Installer
   # Factory method that takes a `Configuration` instance and returns
   # an `Installer` for init.d configuration file.
   @getInitdInstaller: (@configuration) ->
-    files = [
-      new InstallerFile("~/.pow_application/installed/initd",
+    files = []
+    files.push new InstallerFile "~/.pow_application/installed/initd",
         initdSource(@configuration),
         true,
         0644,
-        "/etc/init.d/pow"),
-      new InstallerFile("~/.pow_application/installed/resolvconf_tail",
-        resolvconfSource(@configuration),
-        true,
-        0644,
-        "/etc/resolvconf/resolvconf.conf.d/tail")
-    ]
+        "/etc/init.d/pow"
+    files.push new InstallerFile("~/.pow_application/installed/resolvconf_tail",
+      resolvconfSource(@configuration),
+      true,
+      0644,
+      "/etc/resolvconf/resolvconf.conf.d/tail")
     
     
     new Installer files
