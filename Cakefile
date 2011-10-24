@@ -30,9 +30,8 @@ buildTemplates = (callback) ->
     compile("http_server/proxy_error.html")
     compile("http_server/rackup_file_missing.html")
     compile("http_server/welcome.html")
-    compile("installer/cx.pow.firewall.plist")
-    compile("installer/cx.pow.powd.plist")
-    compile("installer/resolver")
+    compile("installer/pow_initd")
+    compile("installer/resolvconf_tail")
   ], callback
 
 task 'docs', 'Generate annotated source code with Docco', ->
@@ -83,11 +82,11 @@ task 'install', 'Install pow configuration files', ->
     exec "./bin/pow --install-system --dry-run", (needsRoot) ->
       if needsRoot
         console.error "*** Installing system configuration files as root..."
-        sh "sudo ./bin/pow --install-system", (err) ->
+        sh "rvmsudo ./bin/pow --install-system", (err) ->
           if err
             callback err
           else
-            sh "sudo ln -s $HOME/.pow_application/lib/templates/pow_initd.js /etc/init.d/pow", callback
+            callback()
       else
         callback()
 
