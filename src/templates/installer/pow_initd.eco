@@ -1,0 +1,69 @@
+#!/bin/sh
+
+BEGIN INIT INFO
+
+Provides:     pow
+
+
+
+Required-Start:   $remote_fs $syslog
+
+
+
+Required-Stop:    $remote_fs $syslog
+
+
+
+Default-Start:    2 3 4 5
+
+
+
+Default-Stop:     1
+
+
+
+END INIT INFO
+
+
+
+EXEC=<%= @bin %>
+PIDFILE=/var/run/pow.pid
+OPTS=""
+
+
+
+set -e
+
+
+
+. /lib/lsb/init-functions
+
+
+
+
+case "$1" in
+  start)
+    logdaemonmsg "Starting Pow" "pow"
+    if start-stop-daemon --start --quiet --oknodo --make-pidfile --background --pidfile $PIDFILE --exec $EXEC -- $OPTS; then
+        logendmsg 0
+    else
+        logendmsg 1
+    fi
+    ;;
+  stop)
+    logdaemonmsg "Stopping Pow" "pow"
+    if start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE; then
+        logendmsg 0
+    else
+        logendmsg 1
+    fi
+    ;;
+
+*)
+        log_action_msg "Usage: /etc/init.d/pow {start|stop}"
+        exit 1
+esac
+
+
+
+exit 0
