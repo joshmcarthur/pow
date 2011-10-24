@@ -10,18 +10,17 @@ path     = require "path"
 {chown}  = require "./util"
 sys      = require "sys"
 
-# Import the Eco templates for the `/etc/resolver` and `launchd`
+# Import the Eco templates for the `init.d`
 # configuration files.
-resolverSource = require "./templates/installer/resolver"
-firewallSource = require "./templates/installer/cx.pow.firewall.plist"
-daemonSource   = require "./templates/installer/cx.pow.powd.plist"
+initdSource       = require "./templates/installer/pow_initd"
+resolvconfSource  = require "./templates/installer/resolvconf_tail"
 
 # `InstallerFile` represents a single file candidate for installation:
 # a pathname, a string of the file's source, and optional flags
 # indicating whether the file needs to be installed as root and what
 # permission bits it should have.
 class InstallerFile
-  constructor: (@path, source, @root = false, @mode = 0644) ->
+  constructor: (@path, source, @root = false, @mode = 0644, @symlink_path = false) ->
     @source = source.trim()
 
   # Check to see whether the file actually needs to be installed. If
@@ -47,6 +46,10 @@ class InstallerFile
   # Write the file's source to disk and invoke `callback`.
   writeFile: (callback) =>
     fs.writeFile @path, @source, "utf8", callback
+    
+  # Write the file to disk, symlink somewhere else, and invoke 'callback'.
+  symlinkFile: (callback) => 
+    fs.symlinkFile @path, @symlink_path, callback
 
   # If the root flag is set for this file, change its ownership to the
   # `root` user and `wheel` group. Then invoke `callback`.
@@ -64,12 +67,21 @@ class InstallerFile
   # directory, then writing it to disk, and finally setting its
   # ownership and permission bits.
   install: (callback) ->
-    async.series [
-      @vivifyPath,
-      @writeFile,
-      @setOwnership,
-      @setPermissions
-    ], callback
+    if @symlink_path
+      async.series [
+        @vivifyPath,
+        @writeFile,
+        @symlinkFile,
+        @setOwnership,
+        @setPermissions
+      ], callback
+    else
+      async.series [
+        @vivifyPath,
+        @writeFile,
+        @setOwnership,
+        @setPermissions
+      ], callback
 
 # The `Installer` class operates on a set of `InstallerFile` instances.
 # It can check to see if any files are stale and whether or not root
@@ -77,28 +89,24 @@ class InstallerFile
 # files asynchronously.
 module.exports = class Installer
   # Factory method that takes a `Configuration` instance and returns
-  # an `Installer` for system firewall and DNS configuration files.
-  @getSystemInstaller: (@configuration) ->
+  # an `Installer` for init.d configuration file.
+  @getInitdInstaller: (@configuration) ->
     files = [
-      new InstallerFile "/Library/LaunchDaemons/cx.pow.firewall.plist",
-        firewallSource(@configuration),
-        true
+      new InstallerFile("~/.pow_application/installed/initd",
+        initdSource(@configuration),
+        true,
+        0644,
+        "/etc/init.d/pow"),
+      new InstallerFile("~/.pow_application/installed/resolvconf_tail",
+        resolvconfSource(@configuration),
+        true,
+        0644,
+        "/etc/resolvconf/resolvconf.conf.d/tail")
     ]
-
-    for domain in @configuration.domains
-      files.push new InstallerFile "/etc/resolver/#{domain}",
-        resolverSource(@configuration),
-        true
-
+    
+    
     new Installer files
 
-  # Factory method that takes a `Configuration` instance and returns
-  # an `Installer` for the Pow `launchctl` daemon configuration file.
-  @getLocalInstaller: (@configuration) ->
-    new Installer [
-      new InstallerFile "#{process.env.HOME}/Library/LaunchAgents/cx.pow.powd.plist",
-        daemonSource(@configuration)
-    ]
 
   # Create an installer for a set of files.
   constructor: (@files = []) ->

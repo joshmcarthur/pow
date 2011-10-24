@@ -102,7 +102,7 @@ module.exports = class Configuration
     # `hostRoot`: path to the directory containing symlinks to
     # applications that will be served by Pow. Defaults to
     # `~/Library/Application Support/Pow/Hosts`.
-    @hostRoot   = options.hostRoot   ? env.POW_HOST_ROOT   ? libraryPath "Application Support", "Pow", "Hosts"
+    @hostRoot   = options.hostRoot   ? env.POW_HOST_ROOT   ? libraryPath ".pow_aplication", "Hosts"
 
     # `logRoot`: path to the directory that Pow will use to store its
     # log files. Defaults to `~/Library/Logs/Pow`.
@@ -199,7 +199,7 @@ module.exports = class Configuration
 # Convenience wrapper for constructing paths to subdirectories of
 # `~/Library`.
 libraryPath = (args...) ->
-  path.join env.HOME, "Library", args...
+  path.join env.HOME, args...
 
 # Strip a trailing `domain` from the given `host`, then generate a
 # sorted array of possible entry names for finding which application

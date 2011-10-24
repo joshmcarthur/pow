@@ -70,9 +70,9 @@ task 'install', 'Install pow configuration files', ->
         callback()
 
   createHostsDirectory = (callback) ->
-    sh 'mkdir -p "$HOME/Library/Application Support/Pow/Hosts"', (err) ->
+    sh 'mkdir -p "$HOME/.pow_application/Hosts"', (err) ->
       fs.stat "#{process.env['HOME']}/.pow", (err) ->
-        if err then sh 'ln -s "$HOME/Library/Application Support/Pow/Hosts" "$HOME/.pow"', callback
+        if err then sh 'ln -s "$HOME/.pow_application/Hosts" "$HOME/.pow"', callback
         else callback()
 
   installLocal = (callback) ->
@@ -87,7 +87,7 @@ task 'install', 'Install pow configuration files', ->
           if err
             callback err
           else
-            sh "sudo launchctl load /Library/LaunchDaemons/cx.pow.firewall.plist", callback
+            sh "sudo ln -s $HOME/.pow_application/lib/templates/pow_initd.js /etc/init.d/pow", callback
       else
         callback()
 
@@ -96,13 +96,11 @@ task 'install', 'Install pow configuration files', ->
     console.error "*** Installed"
 
 task 'start', 'Start pow server', ->
-  agent = "#{process.env['HOME']}/Library/LaunchAgents/cx.pow.powd.plist"
   console.error "*** Starting the Pow server..."
-  exec "launchctl load '#{agent}'", (err, stdout, stderr) ->
+  exec "/etc/init.d/pow start", (err, stdout, stderr) ->
     console.error stderr if err
 
 task 'stop', 'Stop pow server', ->
-  agent = "#{process.env['HOME']}/Library/LaunchAgents/cx.pow.powd.plist"
   console.error "*** Stopping the Pow server..."
-  exec "launchctl unload '#{agent}'", (err, stdout, stderr) ->
+  exec "/etc/init.d/pow stop", (err, stdout, stderr) ->
     console.error stderr if err

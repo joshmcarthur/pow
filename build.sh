@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash
 # `./build.sh` generates dist/$VERSION.tar.gz
 # `./build.sh --install` installs into ~/Library/Application Support/Pow/Current
 
@@ -16,7 +16,7 @@ BUNDLE_ONLY=1 npm install >/dev/null
 cp `which node` bin
 
 if [ "$1" == "--install" ]; then
-  POW_ROOT="$HOME/Library/Application Support/Pow"
+  POW_ROOT="$HOME/.pow_application"
   rm -fr "$POW_ROOT/Versions/9999.0.0"
   mkdir -p "$POW_ROOT/Versions"
   cp -R "$ROOT/$VERSION" "$POW_ROOT/Versions/9999.0.0"
