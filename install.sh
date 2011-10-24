@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #                       W
 #                      R RW        W.
 #                    RW::::RW    DR::R
@@ -41,18 +41,20 @@
 # Set up the environment. Respect $VERSION if it's set.
 
       set -e
-      POW_ROOT="$HOME/Library/Application Support/Pow"
+      POW_ROOT="$HOME/.pow_application"
       POW_BIN="$POW_ROOT/Current/bin/pow"
       [[ -z "$VERSION" ]] && VERSION=0.3.2
 
 
-# Fail fast if we're not on OS X >= 10.6.0.
-
-      if [ "$(uname -s)" != "Darwin" ]; then
-        echo "Sorry, Pow requires Mac OS X to run." >&2
+# Fail fast if we're not on Ubuntu
+      if [ "$(cat /etc/lsb_release)" !~ "Ubuntu" ]; then
+        echo "Sorry, but the Ubuntu branch of https://github.com/joshmcarthur/pow.git requires Ubuntu to run." >&2
+        echo "If you are running Mac OS X > 10.6, use the main Pow repository (See http://pow.cx)." > &2
         exit 1
-      elif [ "$(expr "$(sw_vers -productVersion | cut -f 2 -d .)" \>= 6)" = 0 ]; then
-        echo "Pow requires Mac OS X 10.6 or later." >&2
+      fi
+      
+      if [ "$(which resolvconf)" != "/sbin/resolvconf" ]; then
+        echo "The resolvconf package is required to run Pow on Ubuntu (sudo apt-get install resolvconf and try again)." >&2
         exit 1
       fi
 
@@ -72,7 +74,7 @@
 
 # Download the requested version of Pow and unpack it.
 
-      curl -s http://get.pow.cx/versions/$VERSION.tar.gz | tar xzf -
+      curl -s https://github.com/joshmcarthur/pow/tarball/ubuntu | tar xzf -
 
 
 # Update the Current symlink to point to the new version.
@@ -104,26 +106,14 @@
       if [ $NEEDS_ROOT -eq 1 ]; then
         echo "*** Installing system configuration files as root..."
         sudo "$POW_BIN" --install-system
-        sudo launchctl load -Fw /Library/LaunchDaemons/cx.pow.firewall.plist 2>/dev/null
       fi
 
 
 # Start (or restart) Pow.
 
       echo "*** Starting the Pow server..."
-      launchctl unload "$HOME/Library/LaunchAgents/cx.pow.powd.plist" 2>/dev/null || true
-      launchctl load -Fw "$HOME/Library/LaunchAgents/cx.pow.powd.plist" 2>/dev/null
+      /etc/init.d/pow start 2>/dev/null
 
-
-# Show a message about where to go for help.
-
-      function print_troubleshooting_instructions() {
-        echo
-        echo "For troubleshooting instructions, please see the Pow wiki:"
-        echo "https://github.com/37signals/pow/wiki/Troubleshooting"
-        echo
-        echo "To uninstall Pow, \`curl get.pow.cx/uninstall.sh | sh\`"
-      }
 
 
 # Check to see if the server is running properly.
@@ -157,17 +147,12 @@
         # system network configuration.
         function reload_network_configuration() {
           echo "*** Reloading system network configuration..."
-          local location=$(networksetup -getcurrentlocation)
-          networksetup -createlocation "pow$$" >/dev/null 2>&1
-          networksetup -switchtolocation "pow$$" >/dev/null 2>&1
-          networksetup -switchtolocation "$location" >/dev/null 2>&1
-          networksetup -deletelocation "pow$$" >/dev/null 2>&1
+          /etc/init.d/networking restart
         }
 
         # Try twice to connect to Pow. Bail if it doesn't work.
         check_status || check_status || {
           echo "!!! Couldn't find a running Pow server on port $POW_HTTP_PORT"
-          print_troubleshooting_instructions
           exit 1
         }
 
@@ -177,7 +162,6 @@
         check_domains || {
           { reload_network_configuration && check_domains; } || {
             echo "!!! Couldn't resolve configured domains ($POW_DOMAINS)"
-            print_troubleshooting_instructions
             exit 1
           }
         }
@@ -187,4 +171,3 @@
 # All done!
 
       echo "*** Installed"
-      print_troubleshooting_instructions
